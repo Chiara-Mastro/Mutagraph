@@ -59,83 +59,17 @@ Prospective outputs for 2025 are generated only after model selection. They are 
 
 ## Model architectures
 
-### Transferable pathogen species and antimicrobial class prior
+### Transferable Pathogen Species and Antimicrobial Class prior
 
-The simplest model is a transferable empirical prior.
-
-For each pathogen species and antimicrobial class combination, the prior pools susceptible and tested isolate counts across the training countries. A weak Beta one one contribution smooths the estimate away from exact zero and one when support is limited.
-
-The model uses no information from the target country or target year. It therefore measures how much can be predicted from broad transferable regularities alone.
-
-For a target cell, the prediction hierarchy is:
-
-1. The matching pathogen species and antimicrobial class combination
-2. The antimicrobial class estimate when the exact combination is unsupported
-3. The pathogen species estimate when the class estimate is also unavailable
-4. The overall training susceptibility mean
-
-The prior plays two roles. First, it is a transparent benchmark for external country completion. Second, it provides the baseline logit used by the residual snapshot encoder. The neural model does not need to relearn the entire global susceptibility landscape. It only needs to learn how the current country year differs from this transferable reference.
+A smoothed empirical prior estimates susceptibility from patterns learned across training countries, falling back from the exact Pathogen Species and Antimicrobial Class combination to broader class, species, and global averages when support is limited.
 
 ### Residual snapshot encoder
 
-The family of residual snapshot encoder models each country year as a partially observed collection of susceptibility cells.
-
-Each observed context cell contributes:
-
-1. A learned pathogen species embedding
-
-2. A learned antimicrobial class embedding
-
-3. The transferable baseline prediction for that combination
-
-4. The observed deviation from the baseline
-
-5. The number of tested isolates
-
-These inputs are processed by a feed forward cell encoder. The resulting cell representations are pooled within the country year snapshot, with isolate support contributing to the pooling weights. A second network transforms the pooled summary into a low dimensional latent country year state.
-
-This latent state is intended to capture the shared local structure of the snapshot. For example, it can represent whether susceptibility in a particular country and year is systematically above or below the transferable prior, and whether that departure differs across parts of the pathogen species and antimicrobial class landscape.
-
-This residual formulation is important. The model is not asked to predict susceptibility from nothing. It begins from a stable transferable prior and learns only the country year specific departure that can be inferred from the observed cells.
-
-The model is trained with a Beta Binomial likelihood. In addition to the predicted mean susceptibility, it learns a fold level concentration parameter that accounts for residual overdispersion in the observed isolate counts.
+The residual snapshot encoder represents each Country Year as a pooled latent state built from observed susceptibility cells and learns how that local surveillance landscape deviates from the transferable prior, while accounting for isolate support and Beta Binomial overdispersion.
 
 ### Graph neural network
 
-The graph model represents every country year snapshot as a bipartite graph connecting pathogen species and antimicrobial classes.
-
-Observed susceptibility cells are graph edges. Missing combinations are absent edges rather than negative examples. This distinction is essential because an unobserved combination means that the pair was not tested, not that susceptibility or resistance is zero.
-
-The architecture uses dual channel message passing.
-
-Each pathogen has two coupled latent states:
-
-1. A wild type state
-
-2. A mutant or resistant state derived as a learned displacement from the wild type state
-
-Each antimicrobial class has its own latent state.
-
-Susceptible isolate counts and non susceptible isolate counts route information through the two pathogen channels separately. Incoming messages are aggregated by their mean rather than their sum, which reduces sensitivity to the total volume of testing in a country. Node states are updated across repeated message passing steps with gated recurrent units.
-
-The graph also includes country conditioning. A hypernetwork transforms a country level health system embedding into the matrices used for message transformation. Because the conditioning is based on a country description rather than a country identifier, the model can generate country specific transformations for a country that was absent from training.
-
-The graph output head is structured around the geometry of the learned representation.
-
-The predicted susceptibility mean is anchored on the alignment between:
-
-1. The learned displacement from the pathogen wild type state to the resistant state
-
-2. The antimicrobial class embedding
-
-A neural residual corrects this geometric signal when the simple alignment is insufficient.
-
-The model also predicts a Beta Binomial concentration parameter. This parameter is calibrated after fitting and is interpreted as isolate level heterogeneity within a surveillance cell. It supports both uncertainty intervals and the sampling return analysis shown in the dashboard.
-
-For completion, an observed target edge is removed before reconstruction. A genuinely missing edge is predicted from the full observed graph of the country year.
-
-For directional change, the graph model produces separate downward and upward scores. These scores support ranking and model specific alerts. They are not assumed to be calibrated probabilities.
-
+The graph neural network represents each Country Year as a bipartite graph linking Pathogen Species and Antimicrobial Classes, uses separate susceptible and resistant pathogen channels with country conditioned message passing, and predicts susceptibility, heterogeneity, missing cells, and directional change rankings.
 
 ## Installation
 
