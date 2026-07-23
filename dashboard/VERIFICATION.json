@@ -1,0 +1,47 @@
+{
+  "observed_rows": 32252,
+  "imputed_rows": 37304,
+  "direction_rows": 32252,
+  "countries": 55,
+  "species": 16,
+  "families": 17,
+  "folds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "observed_years": [
+    2014,
+    2024
+  ],
+  "direction_target_years": [
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "dashboard_direction_rows_2023_2025_long": 17152,
+  "unique_observed_keys": true,
+  "unique_imputed_keys": true,
+  "observed_imputed_overlap": 0,
+  "probability_ranges_valid": true,
+  "sampling_category_counts": {
+    "sampling_sensitive": 8855,
+    "diminishing_returns": 16305,
+    "heterogeneity_dominated": 7092
+  },
+  "readme_counts_match": {
+    "observed": true,
+    "imputed": true,
+    "direction": true
+  }
+}
