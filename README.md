@@ -14,7 +14,9 @@ Mutagraph answers these questions with two complementary model families. A resid
 
 ## What the dashboard provides
 
-The dashboard can be found here: https://chiara-mastro.github.io/Mutagraph/
+The dashboard can be found here: https://chiara-mastro.github.io/Mutagraph/ .
+
+
 It provides three views.
 
 ### Heterogeneity and sampling returns
