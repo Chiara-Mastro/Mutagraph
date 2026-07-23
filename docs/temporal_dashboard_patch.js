@@ -169,7 +169,37 @@ function cleanJumpRows(rawRows) {
   });
 
   if (rejected) console.warn(`${rejected} temporal rows were ignored because required ranking fields were unavailable.`);
-  return Array.from(rows.values());
+  return assignCountryRelativePriority(Array.from(rows.values()));
+}
+
+function assignCountryRelativePriority(rows) {
+  const groups = new Map();
+
+  rows.forEach((row) => {
+    const key = [row.modelName, row.direction, row.targetYear, row.country].join("||");
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
+  });
+
+  groups.forEach((group) => {
+    const ordered = [...group].sort((a, b) =>
+      b.score - a.score
+      || a.species.localeCompare(b.species)
+      || a.family.localeCompare(b.family)
+    );
+    const scores = ordered.map((row) => row.score);
+    const mean = scores.reduce((total, value) => total + value, 0) / scores.length;
+    const variance = scores.reduce((total, value) => total + (value - mean) ** 2, 0) / scores.length;
+    const standardDeviation = Math.sqrt(variance);
+
+    ordered.forEach((row, index) => {
+      if (!Number.isFinite(row.rankCountry) || row.rankCountry <= 0) row.rankCountry = index + 1;
+      row.nCandidatesCountry = ordered.length;
+      row.countryRelativeZ = standardDeviation > 0 ? (row.score - mean) / standardDeviation : 0;
+    });
+  });
+
+  return rows;
 }
 
 function alertDirection() {
@@ -189,7 +219,11 @@ function baseYearDirectionRows() {
 }
 
 function currentAlertCountry() {
-  return jById("alertCountrySelect")?.value ?? "";
+  return jById("alertCountrySelect")?.value ?? "All";
+}
+
+function allCountriesSelected() {
+  return currentAlertCountry() === "All";
 }
 
 function alertFilters() {
@@ -205,7 +239,7 @@ function alertFilters() {
 function rowMatchesAlertFilters(row, filters) {
   return row.targetYear === filters.year
     && row.direction === filters.direction
-    && row.country === filters.country
+    && (filters.country === "All" || row.country === filters.country)
     && (filters.species === "All" || row.species === filters.species)
     && (filters.family === "All" || row.family === filters.family);
 }
@@ -228,25 +262,40 @@ function selectedModelName(role, year) {
 function alertRowsForRole(role) {
   const filters = alertFilters();
   const modelName = selectedModelName(role, filters.year);
-  if (!modelName || !filters.country) return [];
+  if (!modelName) return [];
 
-  return jumpState.rows
-    .filter((row) => row.modelName === modelName && rowMatchesAlertFilters(row, filters))
-    .sort((a, b) => {
-      const aRank = Number.isFinite(a.rankCountry) && a.rankCountry > 0 ? a.rankCountry : Infinity;
-      const bRank = Number.isFinite(b.rankCountry) && b.rankCountry > 0 ? b.rankCountry : Infinity;
-      return aRank - bRank || b.score - a.score || a.species.localeCompare(b.species) || a.family.localeCompare(b.family);
-    });
+  const rows = jumpState.rows.filter(
+    (row) => row.modelName === modelName && rowMatchesAlertFilters(row, filters)
+  );
+
+  if (filters.country === "All") {
+    return rows.sort((a, b) =>
+      Number(b.predictedAlert) - Number(a.predictedAlert)
+      || b.countryRelativeZ - a.countryRelativeZ
+      || localRank(a) - localRank(b)
+      || a.country.localeCompare(b.country)
+      || a.species.localeCompare(b.species)
+      || a.family.localeCompare(b.family)
+    );
+  }
+
+  return rows.sort((a, b) =>
+    localRank(a) - localRank(b)
+    || b.score - a.score
+    || a.species.localeCompare(b.species)
+    || a.family.localeCompare(b.family)
+  );
 }
 
 function updateAlertCountries() {
   const countries = jUnique(baseYearDirectionRows().map((row) => row.country));
-  jFillSelect("alertCountrySelect", countries, false, countries[0] ?? null);
+  jFillSelect("alertCountrySelect", countries, true, "All");
 }
 
 function countryRows() {
   const country = currentAlertCountry();
-  return baseYearDirectionRows().filter((row) => row.country === country);
+  const rows = baseYearDirectionRows();
+  return country === "All" ? rows : rows.filter((row) => row.country === country);
 }
 
 function updateAlertFamilies(preferred = "All") {
@@ -268,14 +317,15 @@ function updateAlertSpeciesAndFamilies() {
 function updateAlertMetrics(prefix, rows) {
   const top = rows.slice(0, PRIORITY_TOP_COUNT);
   jById(`${prefix}AlertCandidateCount`).textContent = rows.length.toLocaleString();
+  jById(`${prefix}AlertCountryCount`).textContent = new Set(rows.map((row) => row.country)).size.toLocaleString();
   jById(`${prefix}AlertFlaggedCount`).textContent = rows.filter((row) => row.predictedAlert).length.toLocaleString();
   jById(`${prefix}AlertTopCount`).textContent = top.length.toLocaleString();
 }
 
-function rowRank(row, index) {
+function localRank(row) {
   return Number.isFinite(row.rankCountry) && row.rankCountry > 0
     ? Math.round(row.rankCountry)
-    : index + 1;
+    : Number.MAX_SAFE_INTEGER;
 }
 
 function drawPriorityTable(prefix, role, rows, sharedKeys) {
@@ -284,14 +334,15 @@ function drawPriorityTable(prefix, role, rows, sharedKeys) {
   const label = role === "residual" ? "Temporal residual jump heads" : "GNN direction detector";
 
   if (!top.length) {
-    body.innerHTML = `<tr><td colspan="7">No ${jEscape(label)} candidates match the selected filters.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="8">No ${jEscape(label)} candidates match the selected filters.</td></tr>`;
     return;
   }
 
   body.innerHTML = top.map((row, index) => {
     const shared = sharedKeys.has(candidateIdentity(row));
     return `<tr class="${row.predictedAlert ? "isFlagged" : ""} ${shared ? "isSharedPriority" : ""}">
-      <td><span class="priorityRank">${rowRank(row, index)}</span>${shared ? '<span class="sharedPriorityTag">Shared</span>' : ""}</td>
+      <td><span class="priorityRank">${index + 1}</span>${shared ? '<span class="sharedPriorityTag">Shared</span>' : ""}</td>
+      <td>${localRank(row) === Number.MAX_SAFE_INTEGER ? "—" : localRank(row)}</td>
       <td>${jEscape(row.country)}</td>
       <td>${jEscape(row.species)}</td>
       <td>${jEscape(row.family)}</td>
@@ -318,7 +369,8 @@ function updateOverlapSummary(residualRows, gnnRows) {
   const filters = alertFilters();
   const directionLabel = filters.direction === "up" ? "recovery" : "emergence";
   const summary = jById("priorityFilterSummary");
-  if (summary) summary.textContent = `${filters.country} · ${filters.year} · ${directionLabel}`;
+  const countryLabel = filters.country === "All" ? "All countries" : filters.country;
+  if (summary) summary.textContent = `${countryLabel} · ${filters.year} · ${directionLabel}`;
 
   return sharedKeys;
 }
@@ -330,8 +382,22 @@ function redrawAlerts() {
   const gnnRows = alertRowsForRole("gnn");
   const sharedKeys = updateOverlapSummary(residualRows, gnnRows);
 
-  jById("snapshotAlertPlotTitle").textContent = alertDirectionTitle();
-  jById("gnnAlertPlotTitle").textContent = alertDirectionTitle();
+  const globalView = allCountriesSelected();
+  const title = `${globalView ? "Global " : ""}${alertDirectionTitle()}`;
+  const basisLabel = globalView ? "Relative priority across countries" : "Rank within country";
+  const residualInterpretation = globalView
+    ? "Candidates are ordered by how extreme each model score is relative to other candidates in the same country and year. Raw score magnitudes are never compared directly across countries."
+    : "Candidates are ordered by the model score within the selected country and year. The score is used for ordering only.";
+  const gnnInterpretation = globalView
+    ? "The global list combines country level GNN watchlists using within country standardisation. The raw sigmoid output is not presented as a calibrated probability."
+    : "Candidates are ordered using the GNN within country rank. The raw sigmoid output is not presented as a calibrated probability.";
+
+  jById("snapshotAlertPlotTitle").textContent = title;
+  jById("gnnAlertPlotTitle").textContent = title;
+  jById("snapshotAlertInterpretation").textContent = residualInterpretation;
+  jById("gnnAlertInterpretation").textContent = gnnInterpretation;
+  jById("snapshotPriorityBasis").textContent = basisLabel;
+  jById("gnnPriorityBasis").textContent = basisLabel;
 
   updateAlertMetrics("snapshot", residualRows);
   updateAlertMetrics("gnn", gnnRows);
@@ -407,7 +473,7 @@ async function loadJumpData() {
     jUpdateStatus("Jump priority data not loaded", true);
     ["snapshotAlertTableBody", "gnnAlertTableBody"].forEach((id) => {
       const body = jById(id);
-      if (body) body.innerHTML = `<tr><td colspan="7">Could not load priority data.<br>${jEscape(error.message || error)}</td></tr>`;
+      if (body) body.innerHTML = `<tr><td colspan="8">Could not load priority data.<br>${jEscape(error.message || error)}</td></tr>`;
     });
   }
 }
