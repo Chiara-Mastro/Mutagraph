@@ -1,0 +1,3 @@
+population,n_cells,floor_sd_median_pct,frac_under_sampled,frac_at_limit,frac_over_sampled,frac_floor_sd_gt_5pct
+observed (LOO),32252,6.130736035614687,0.27455661664392905,0.5055500434081608,0.21989333994791022,0.6928252511472157
+imputable,37304,6.4988956553912836,,,,

@@ -1,0 +1,30 @@
+{
+  "source_dir": "results/jump_heads_full",
+  "observed_source": "results/jump_heads_full/temporal_residual_jump_predictions_all_external_tests.csv",
+  "future_source": "results/jump_heads_full/temporal_residual_future_jump_predictions.csv",
+  "destination": "dashboard/temporal_prediction/temporal_jump_candidate_rankings.csv",
+  "n_rows": 33118,
+  "target_years": [
+    2023,
+    2024,
+    2025
+  ],
+  "n_2025_rows": 10948,
+  "directions": [
+    "down",
+    "up"
+  ],
+  "ranking_unit": "model, direction, Country, input_year, target_year",
+  "candidate_rule": "Current cell must be observed when the source exports that flag.",
+  "temporal_value_column": "jump_probability",
+  "temporal_value_type": "learned direction probability",
+  "alert_threshold": 0.5,
+  "gnn_direction_source": "dashboard/graph_model/observed_direction_forecast.csv",
+  "n_gnn_rows": 17152,
+  "n_residual_rows": 15966,
+  "models": [
+    "frozen_temporal_residual_jump_heads",
+    "gnn",
+    "gnn_future"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "source": "dashboard/graph_model/reconstruction_observed_loo.csv",
+  "cells_output": "dashboard/graph_model/sampling_returns_cells.csv",
+  "excluded_output": "dashboard/graph_model/sampling_returns_excluded.csv",
+  "n_source_rows": 32252,
+  "n_eligible_rows": 32252,
+  "n_excluded_rows": 0,
+  "category_counts": {
+    "diminishing_returns": 16305,
+    "sampling_sensitive": 8855,
+    "heterogeneity_dominated": 7092
+  },
+  "category_definition": {
+    "sampling_sensitive": "n_total < 2 * nu_cal",
+    "diminishing_returns": "2 * nu_cal <= n_total <= 10 * nu_cal",
+    "heterogeneity_dominated": "n_total > 10 * nu_cal"
+  },
+  "interpretation": "Regimes describe expected marginal return from additional sampling under the calibrated GNN model. They are not formal surveillance adequacy thresholds and do not indicate too few or too many collected isolates.",
+  "validation": {
+    "unique_country_year_species_family": true,
+    "ci_width_matches_bounds": true,
+    "floor_sd_nonnegative": true
+  }
+}

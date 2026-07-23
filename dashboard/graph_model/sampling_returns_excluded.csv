@@ -1,0 +1,1 @@
+Country,Year,Species,Family,n_S,n_total,prop_S_observed,alpha_raw,beta_raw,n_context_edges,fold_model,nu_raw,prop_S_pred,n_S_pred,abs_error,lambda_applied,nu_cal,alpha_cal,beta_cal,ci_lo_cal,ci_hi_cal,ci_width_cal,floor_sd_cal,n_stop_2nu,n_stop_5nu,n_stop_10nu,n_total_over_nu_cal,effort_status
