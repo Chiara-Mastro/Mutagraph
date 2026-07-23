@@ -1,8 +1,10 @@
 {
-  "task_intro_blocks_removed": 3,
-  "jump_dom_ids_checked": 17,
-  "missing_jump_dom_ids": [],
-  "frontend_files": [
+  "base_version": "AMR_dashboard_global_watchlist_fixed.zip",
+  "intro_blocks_removed": 3,
+  "jump_required_ids": 17,
+  "missing_jump_ids": [],
+  "jump_primary_path": "temporal_prediction/temporal_jump_candidate_rankings.csv",
+  "files": [
     "index.html",
     "styles.css",
     "app.js",

@@ -2152,18 +2152,7 @@ code {
 }
 
 
-/* Panel explanations are shown inside the task selector. */
-.taskIntro { display: none !important; }
-.taskButton { align-items: flex-start; }
+/* Descriptions are contained in the task selector itself. */
 .taskButton > span:last-child { display: block; min-width: 0; }
-.taskButton strong { display: block; margin-bottom: 0.28rem; }
-.taskButton small {
-  display: block;
-  margin-top: 0;
-  font-size: 0.9rem;
-  line-height: 1.32;
-  max-width: 46ch;
-}
-@media (max-width: 900px) {
-  .taskButton small { font-size: 0.84rem; }
-}
+.taskButton strong { display: block; margin-bottom: 0.25rem; }
+.taskButton small { display: block; margin-top: 0; line-height: 1.35; }
